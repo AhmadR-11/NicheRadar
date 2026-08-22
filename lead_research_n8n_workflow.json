@@ -1,0 +1,270 @@
+{
+  "name": "Lead Research Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Lead Research Tool",
+        "formDescription": "City, niche, aur sources enter karo — Reddit se real posts fetch honge",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "City / State",
+              "placeholder": "e.g. Houston, Texas",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Country",
+              "placeholder": "e.g. USA",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Niche / Industry",
+              "placeholder": "e.g. Real Estate, Law Firm, Dental",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Custom Questions",
+              "fieldType": "textarea",
+              "placeholder": "Ek line mein ek question likho jaise:\nDo they run Google Ads?\nDo they have a website?\nAre they active on Instagram?",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Sources to Search",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  { "option": "Reddit Only" },
+                  { "option": "Reddit + LinkedIn" },
+                  { "option": "Reddit + Google Maps" },
+                  { "option": "All Sources" }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.1,
+      "position": [240, 300],
+      "webhookId": "lead-research-form-001"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Form data extract karo\nconst city = $input.first().json['City / State'] || '';\nconst country = $input.first().json['Country'] || '';\nconst niche = $input.first().json['Niche / Industry'] || '';\nconst customQuestions = $input.first().json['Custom Questions'] || '';\nconst sourcesChoice = $input.first().json['Sources to Search'] || 'Reddit Only';\n\n// Reddit search query build karo\nconst redditQuery = encodeURIComponent(`${niche} ${city} ${country}`);\nconst redditUrl = `https://www.reddit.com/search.json?q=${redditQuery}&sort=relevance&limit=10&type=link`;\n\n// Source URLs build karo\nconst linkedinUrl = `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(`${niche} ${city}`)}` ;\nconst googleMapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(`${niche} ${city} ${country}`)}`;\nconst facebookUrl = `https://www.facebook.com/search/pages/?q=${encodeURIComponent(`${niche} ${city}`)}`;\nconst yelpUrl = `https://www.yelp.com/search?find_desc=${encodeURIComponent(niche)}&find_loc=${encodeURIComponent(`${city} ${country}`)}`;\n\n// Custom questions parse karo\nconst questionsList = customQuestions\n  .split('\\n')\n  .map(q => q.trim())\n  .filter(q => q.length > 0);\n\n// Timestamp\nconst timestamp = new Date().toISOString();\n\nreturn [\n  {\n    json: {\n      city,\n      country,\n      niche,\n      customQuestions: questionsList,\n      customQuestionsRaw: customQuestions,\n      sourcesChoice,\n      redditUrl,\n      redditQuery: decodeURIComponent(redditQuery),\n      linkedinUrl,\n      googleMapsUrl,\n      facebookUrl,\n      yelpUrl,\n      timestamp\n    }\n  }\n];"
+      },
+      "id": "a1b2c3d4-0002-0002-0002-000000000002",
+      "name": "Build Search Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.redditUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false
+            }
+          },
+          "headers": {
+            "User-Agent": "n8n-lead-research-bot/1.0"
+          }
+        }
+      },
+      "id": "a1b2c3d4-0003-0003-0003-000000000003",
+      "name": "Fetch Reddit Posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reddit response parse karo\nconst redditData = $input.first().json;\nconst posts = redditData?.data?.children || [];\n\n// Previous node ka data lo\nconst prevData = $('Build Search Data').first().json;\n\n// Reddit posts format karo\nconst formattedPosts = posts.slice(0, 10).map((post, index) => {\n  const p = post.data;\n  return {\n    index: index + 1,\n    title: p.title || '',\n    subreddit: p.subreddit_name_prefixed || '',\n    url: `https://reddit.com${p.permalink}` || '',\n    score: p.score || 0,\n    numComments: p.num_comments || 0,\n    author: p.author || '',\n    created: new Date(p.created_utc * 1000).toLocaleDateString()\n  };\n});\n\n// Top 5 posts summary for sheets\nconst top5Summary = formattedPosts.slice(0, 5)\n  .map(p => `${p.index}. ${p.title} (${p.subreddit}) — ${p.url}`)\n  .join('\\n');\n\n// Custom questions as string\nconst questionsStr = prevData.customQuestions.length > 0\n  ? prevData.customQuestions.map((q, i) => `Q${i+1}: ${q}`).join('\\n')\n  : 'No custom questions provided';\n\nreturn [\n  {\n    json: {\n      // Sheet mein jane wala data\n      Timestamp: prevData.timestamp,\n      City: prevData.city,\n      Country: prevData.country,\n      Niche: prevData.niche,\n      'Sources Selected': prevData.sourcesChoice,\n      'Custom Questions': questionsStr,\n      'Reddit Posts Found': formattedPosts.length,\n      'Top Reddit Results': top5Summary,\n      'Reddit Search URL': prevData.redditUrl,\n      'LinkedIn URL': prevData.linkedinUrl,\n      'Google Maps URL': prevData.googleMapsUrl,\n      'Facebook URL': prevData.facebookUrl,\n      'Yelp URL': prevData.yelpUrl,\n      // Extra metadata\n      _allPosts: JSON.stringify(formattedPosts),\n      _redditQuery: prevData.redditQuery\n    }\n  }\n];"
+      },
+      "id": "a1b2c3d4-0004-0004-0004-000000000004",
+      "name": "Parse Reddit + Merge Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "resource": "spreadsheet",
+        "operation": "create",
+        "title": "=Lead Research — {{ $json.Niche }} — {{ $json.City }} — {{ $json.Timestamp.slice(0,10) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0005-0005-0005-000000000005",
+      "name": "Create Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1120, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Create Google Sheet').first().json.spreadsheetId }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.Timestamp }}",
+            "City": "={{ $json.City }}",
+            "Country": "={{ $json.Country }}",
+            "Niche": "={{ $json.Niche }}",
+            "Sources Selected": "={{ $json['Sources Selected'] }}",
+            "Custom Questions": "={{ $json['Custom Questions'] }}",
+            "Reddit Posts Found": "={{ $json['Reddit Posts Found'] }}",
+            "Top Reddit Results": "={{ $json['Top Reddit Results'] }}",
+            "Reddit Search URL": "={{ $json['Reddit Search URL'] }}",
+            "LinkedIn URL": "={{ $json['LinkedIn URL'] }}",
+            "Google Maps URL": "={{ $json['Google Maps URL'] }}",
+            "Facebook URL": "={{ $json['Facebook URL'] }}",
+            "Yelp URL": "={{ $json['Yelp URL'] }}"
+          },
+          "schema": [
+            { "id": "Timestamp", "displayName": "Timestamp", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "City", "displayName": "City", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Country", "displayName": "Country", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Niche", "displayName": "Niche", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Sources Selected", "displayName": "Sources Selected", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "Custom Questions", "displayName": "Custom Questions", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "Reddit Posts Found", "displayName": "Reddit Posts Found", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": false },
+            { "id": "Top Reddit Results", "displayName": "Top Reddit Results", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "Reddit Search URL", "displayName": "Reddit Search URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "LinkedIn URL", "displayName": "LinkedIn URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "Google Maps URL", "displayName": "Google Maps URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "Facebook URL", "displayName": "Facebook URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
+            { "id": "Yelp URL", "displayName": "Yelp URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0006-0006-0006-000000000006",
+      "name": "Save to Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1340, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Data saved successfully!\",\n  \"spreadsheetId\": \"{{ $('Create Google Sheet').first().json.spreadsheetId }}\",\n  \"spreadsheetUrl\": \"https://docs.google.com/spreadsheets/d/{{ $('Create Google Sheet').first().json.spreadsheetId }}\",\n  \"redditPostsFound\": {{ $('Parse Reddit + Merge Data').first().json['Reddit Posts Found'] }},\n  \"niche\": \"{{ $('Parse Reddit + Merge Data').first().json.Niche }}\",\n  \"city\": \"{{ $('Parse Reddit + Merge Data').first().json.City }}\"\n}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0007-0007-0007-000000000007",
+      "name": "Form Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1560, 300]
+    }
+  ],
+  "connections": {
+    "Form Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Search Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Search Data": {
+      "main": [
+        [
+          {
+            "node": "Fetch Reddit Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Reddit Posts": {
+      "main": [
+        [
+          {
+            "node": "Parse Reddit + Merge Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Reddit + Merge Data": {
+      "main": [
+        [
+          {
+            "node": "Create Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Form Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": ["lead-research", "reddit", "google-sheets", "automation"],
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "n8nVersion": "1.0.0"
+  }
+}
