@@ -144,9 +144,9 @@
         "documentId": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $json.MasterSheetId }}"
+          "value": "={{ $('Parse & Filter 24h Queries').first().json.MasterSheetId }}"
         },
-        "title": "={{ $json.TabName }}",
+        "title": "={{ $('Parse & Filter 24h Queries').first().json.TabName }}",
         "options": {}
       },
       "id": "a1b2c3d4-0005-0005-0005-000000000005",
@@ -172,7 +172,7 @@
         "documentId": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $json.MasterSheetId }}"
+          "value": "={{ $('Parse & Filter 24h Queries').first().json.MasterSheetId }}"
         },
         "sheetName": {
           "__rl": true,
@@ -182,19 +182,19 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "Timestamp": "={{ $json.Timestamp }}",
-            "City": "={{ $json.City }}",
-            "Country": "={{ $json.Country }}",
-            "Niche": "={{ $json.Niche }}",
-            "Source Selected": "={{ $json['Source Selected'] }}",
-            "Custom Questions": "={{ $json['Custom Questions'] }}",
-            "24h Queries Found": "={{ $json['24h Queries Found'] }}",
-            "Top Reddit Queries (Last 24h)": "={{ $json['Top Reddit Queries (Last 24h)'] }}",
-            "Reddit (24h Search)": "={{ $json['Reddit (24h Search)'] }}",
-            "LinkedIn (24h Search)": "={{ $json['LinkedIn (24h Search)'] }}",
-            "Facebook (24h Search)": "={{ $json['Facebook (24h Search)'] }}",
-            "General Forums (24h Search)": "={{ $json['General Forums (24h Search)'] }}",
-            "Google Maps URL": "={{ $json['Google Maps URL'] }}"
+            "Timestamp": "={{ $('Parse & Filter 24h Queries').first().json.Timestamp }}",
+            "City": "={{ $('Parse & Filter 24h Queries').first().json.City }}",
+            "Country": "={{ $('Parse & Filter 24h Queries').first().json.Country }}",
+            "Niche": "={{ $('Parse & Filter 24h Queries').first().json.Niche }}",
+            "Source Selected": "={{ $('Parse & Filter 24h Queries').first().json['Source Selected'] }}",
+            "Custom Questions": "={{ $('Parse & Filter 24h Queries').first().json['Custom Questions'] }}",
+            "24h Queries Found": "={{ $('Parse & Filter 24h Queries').first().json['24h Queries Found'] }}",
+            "Top Reddit Queries (Last 24h)": "={{ $('Parse & Filter 24h Queries').first().json['Top Reddit Queries (Last 24h)'] }}",
+            "Reddit (24h Search)": "={{ $('Parse & Filter 24h Queries').first().json['Reddit (24h Search)'] }}",
+            "LinkedIn (24h Search)": "={{ $('Parse & Filter 24h Queries').first().json['LinkedIn (24h Search)'] }}",
+            "Facebook (24h Search)": "={{ $('Parse & Filter 24h Queries').first().json['Facebook (24h Search)'] }}",
+            "General Forums (24h Search)": "={{ $('Parse & Filter 24h Queries').first().json['General Forums (24h Search)'] }}",
+            "Google Maps URL": "={{ $('Parse & Filter 24h Queries').first().json['Google Maps URL'] }}"
           },
           "schema": [
             {
