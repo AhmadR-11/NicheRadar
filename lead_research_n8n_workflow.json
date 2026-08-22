@@ -78,7 +78,7 @@
       "parameters": {
         "jsCode": "// Form data extract karo\nlet masterSheetIdRaw = $input.first().json['Master Google Sheet ID or Full URL'] || '';\nlet masterSheetId = masterSheetIdRaw.trim();\n\n// Auto-extract ID if full URL is pasted\nif (masterSheetId.includes('/d/')) {\n  masterSheetId = masterSheetId.split('/d/')[1].split('/')[0];\n}\n\nconst city = $input.first().json['City / State'] || '';\nconst country = $input.first().json['Country'] || '';\nconst niche = $input.first().json['Niche / Industry'] || '';\nconst customQuestions = $input.first().json['Custom Questions / Query Guidelines'] || '';\nconst sourcesChoice = $input.first().json['Sources to Search'] || 'All Platforms (24h Filter)';\n\n// Tab Name build karo (e.g., Real Estate - Houston)\nconst tabName = `${niche} - ${city}`.slice(0, 30); // Max 30 chars for tab safety\n\n// Reddit search query build karo\nconst searchQuery = `${niche} ${city} ${country}`;\nconst redditQuery = encodeURIComponent(searchQuery);\nconst redditUrl = `https://www.reddit.com/search.rss?q=${redditQuery}&sort=new&t=day`;\n\n// 24h Filtered Search URLs for platforms\nconst linkedin24hUrl = `https://www.google.com/search?q=site:linkedin.com/posts+${encodeURIComponent(`${niche} ${city} ${country}`)}&tbs=qdr:d`;\nconst reddit24hWebUrl = `https://www.reddit.com/search/?q=${encodeURIComponent(`${niche} ${city} ${country}`)}&t=day&sort=new`;\nconst googleMapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(`${niche} ${city} ${country}`)}`;\nconst facebook24hUrl = `https://www.google.com/search?q=site:facebook.com+${encodeURIComponent(`${niche} ${city}`)}&tbs=qdr:d`;\nconst generalForums24hUrl = `https://www.google.com/search?q=${encodeURIComponent(`\"${niche}\" \"${city}\" (\"help\" OR \"question\" OR \"looking for\" OR \"recommendation\")`)}&tbs=qdr:d`;\n\n// Custom questions parse karo\nconst questionsList = customQuestions\n  .split('\\n')\n  .map(q => q.trim())\n  .filter(q => q.length > 0);\n\nconst timestamp = new Date().toISOString();\n\nreturn [\n  {\n    json: {\n      masterSheetId,\n      tabName,\n      city,\n      country,\n      niche,\n      customQuestions: questionsList,\n      customQuestionsRaw: customQuestions,\n      sourcesChoice,\n      redditUrl,\n      redditQuery: searchQuery,\n      linkedin24hUrl,\n      reddit24hWebUrl,\n      googleMapsUrl,\n      facebook24hUrl,\n      generalForums24hUrl,\n      timestamp\n    }\n  }\n];"
       },
-      "id": "a1b2c3d4-0002-0002-0002-000000000002",
+      "id": "a1b2c3d4-0001-0002-0002-000000000002",
       "name": "Build Search Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -139,7 +139,7 @@
     {
       "parameters": {
         "authentication": "oAuth2",
-        "operation": "appendOrUpdate",
+        "operation": "append",
         "documentId": {
           "__rl": true,
           "mode": "id",
