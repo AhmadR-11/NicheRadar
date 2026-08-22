@@ -1,10 +1,10 @@
 {
-  "name": "Lead Research Automation",
+  "name": "Lead Research Automation (24h Filtered)",
   "nodes": [
     {
       "parameters": {
-        "formTitle": "Lead Research Tool",
-        "formDescription": "City, niche, aur sources enter karo — Reddit se real posts fetch honge",
+        "formTitle": "Lead Research & Query Radar (24h Filter)",
+        "formDescription": "Enter Location, Niche, and Optional Questions. Automatically fetches queries & posts posted in the LAST 24 HOURS across platforms.",
         "formFields": {
           "values": [
             {
@@ -19,13 +19,13 @@
             },
             {
               "fieldLabel": "Niche / Industry",
-              "placeholder": "e.g. Real Estate, Law Firm, Dental",
+              "placeholder": "e.g. Real Estate, Law Firm, Medical, Dentist, Video Editor",
               "requiredField": true
             },
             {
-              "fieldLabel": "Custom Questions",
+              "fieldLabel": "Custom Questions / Query Guidelines",
               "fieldType": "textarea",
-              "placeholder": "Ek line mein ek question likho jaise:\nDo they run Google Ads?\nDo they have a website?\nAre they active on Instagram?",
+              "placeholder": "Enter relevant questions (Optional, 1 per line):\nDo they run Google Ads?\nAre they looking for video editors?\nDo they need website redesign?",
               "requiredField": false
             },
             {
@@ -33,10 +33,18 @@
               "fieldType": "dropdown",
               "fieldOptions": {
                 "values": [
-                  { "option": "Reddit Only" },
-                  { "option": "Reddit + LinkedIn" },
-                  { "option": "Reddit + Google Maps" },
-                  { "option": "All Sources" }
+                  {
+                    "option": "Reddit Only (24h)"
+                  },
+                  {
+                    "option": "Reddit + LinkedIn (24h)"
+                  },
+                  {
+                    "option": "Reddit + Google Maps"
+                  },
+                  {
+                    "option": "All Platforms (24h Filter)"
+                  }
                 ]
               },
               "requiredField": true
@@ -49,18 +57,24 @@
       "name": "Form Trigger",
       "type": "n8n-nodes-base.formTrigger",
       "typeVersion": 2.1,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "webhookId": "lead-research-form-001"
     },
     {
       "parameters": {
-        "jsCode": "// Form data extract karo\nconst city = $input.first().json['City / State'] || '';\nconst country = $input.first().json['Country'] || '';\nconst niche = $input.first().json['Niche / Industry'] || '';\nconst customQuestions = $input.first().json['Custom Questions'] || '';\nconst sourcesChoice = $input.first().json['Sources to Search'] || 'Reddit Only';\n\n// Reddit search query build karo\nconst redditQuery = encodeURIComponent(`${niche} ${city} ${country}`);\nconst redditUrl = `https://www.reddit.com/search.json?q=${redditQuery}&sort=relevance&limit=10&type=link`;\n\n// Source URLs build karo\nconst linkedinUrl = `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(`${niche} ${city}`)}` ;\nconst googleMapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(`${niche} ${city} ${country}`)}`;\nconst facebookUrl = `https://www.facebook.com/search/pages/?q=${encodeURIComponent(`${niche} ${city}`)}`;\nconst yelpUrl = `https://www.yelp.com/search?find_desc=${encodeURIComponent(niche)}&find_loc=${encodeURIComponent(`${city} ${country}`)}`;\n\n// Custom questions parse karo\nconst questionsList = customQuestions\n  .split('\\n')\n  .map(q => q.trim())\n  .filter(q => q.length > 0);\n\n// Timestamp\nconst timestamp = new Date().toISOString();\n\nreturn [\n  {\n    json: {\n      city,\n      country,\n      niche,\n      customQuestions: questionsList,\n      customQuestionsRaw: customQuestions,\n      sourcesChoice,\n      redditUrl,\n      redditQuery: decodeURIComponent(redditQuery),\n      linkedinUrl,\n      googleMapsUrl,\n      facebookUrl,\n      yelpUrl,\n      timestamp\n    }\n  }\n];"
+        "jsCode": "// Form data extract karo\nconst city = $input.first().json['City / State'] || '';\nconst country = $input.first().json['Country'] || '';\nconst niche = $input.first().json['Niche / Industry'] || '';\nconst customQuestions = $input.first().json['Custom Questions / Query Guidelines'] || '';\nconst sourcesChoice = $input.first().json['Sources to Search'] || 'All Platforms (24h Filter)';\n\n// Reddit search query build karo (24 Hours filter: t=day, sort=new)\nconst searchQuery = `${niche} ${city} ${country}`;\nconst redditQuery = encodeURIComponent(searchQuery);\nconst redditUrl = `https://www.reddit.com/search.json?q=${redditQuery}&sort=new&t=day&limit=25&type=link`;\n\n// 24h Filtered Search URLs for other platforms (using Google tbs=qdr:d parameter -> past 24 hours)\nconst linkedin24hUrl = `https://www.google.com/search?q=site:linkedin.com/posts+${encodeURIComponent(`${niche} ${city} ${country}`)}&tbs=qdr:d`;\nconst reddit24hWebUrl = `https://www.reddit.com/search/?q=${encodeURIComponent(`${niche} ${city} ${country}`)}&t=day&sort=new`;\nconst googleMapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(`${niche} ${city} ${country}`)}`;\nconst facebook24hUrl = `https://www.google.com/search?q=site:facebook.com+${encodeURIComponent(`${niche} ${city}`)}&tbs=qdr:d`;\nconst generalForums24hUrl = `https://www.google.com/search?q=${encodeURIComponent(`\"${niche}\" \"${city}\" (\"help\" OR \"question\" OR \"looking for\" OR \"recommendation\")`)}&tbs=qdr:d`;\n\n// Custom questions parse karo\nconst questionsList = customQuestions\n  .split('\\n')\n  .map(q => q.trim())\n  .filter(q => q.length > 0);\n\n// Timestamp\nconst timestamp = new Date().toISOString();\n\nreturn [\n  {\n    json: {\n      city,\n      country,\n      niche,\n      customQuestions: questionsList,\n      customQuestionsRaw: customQuestions,\n      sourcesChoice,\n      redditUrl,\n      redditQuery: searchQuery,\n      linkedin24hUrl,\n      reddit24hWebUrl,\n      googleMapsUrl,\n      facebook24hUrl,\n      generalForums24hUrl,\n      timestamp\n    }\n  }\n];"
       },
       "id": "a1b2c3d4-0002-0002-0002-000000000002",
       "name": "Build Search Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -77,34 +91,43 @@
         }
       },
       "id": "a1b2c3d4-0003-0003-0003-000000000003",
-      "name": "Fetch Reddit Posts",
+      "name": "Fetch Reddit Posts (24h)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Reddit response parse karo\nconst redditData = $input.first().json;\nconst posts = redditData?.data?.children || [];\n\n// Previous node ka data lo\nconst prevData = $('Build Search Data').first().json;\n\n// Reddit posts format karo\nconst formattedPosts = posts.slice(0, 10).map((post, index) => {\n  const p = post.data;\n  return {\n    index: index + 1,\n    title: p.title || '',\n    subreddit: p.subreddit_name_prefixed || '',\n    url: `https://reddit.com${p.permalink}` || '',\n    score: p.score || 0,\n    numComments: p.num_comments || 0,\n    author: p.author || '',\n    created: new Date(p.created_utc * 1000).toLocaleDateString()\n  };\n});\n\n// Top 5 posts summary for sheets\nconst top5Summary = formattedPosts.slice(0, 5)\n  .map(p => `${p.index}. ${p.title} (${p.subreddit}) — ${p.url}`)\n  .join('\\n');\n\n// Custom questions as string\nconst questionsStr = prevData.customQuestions.length > 0\n  ? prevData.customQuestions.map((q, i) => `Q${i+1}: ${q}`).join('\\n')\n  : 'No custom questions provided';\n\nreturn [\n  {\n    json: {\n      // Sheet mein jane wala data\n      Timestamp: prevData.timestamp,\n      City: prevData.city,\n      Country: prevData.country,\n      Niche: prevData.niche,\n      'Sources Selected': prevData.sourcesChoice,\n      'Custom Questions': questionsStr,\n      'Reddit Posts Found': formattedPosts.length,\n      'Top Reddit Results': top5Summary,\n      'Reddit Search URL': prevData.redditUrl,\n      'LinkedIn URL': prevData.linkedinUrl,\n      'Google Maps URL': prevData.googleMapsUrl,\n      'Facebook URL': prevData.facebookUrl,\n      'Yelp URL': prevData.yelpUrl,\n      // Extra metadata\n      _allPosts: JSON.stringify(formattedPosts),\n      _redditQuery: prevData.redditQuery\n    }\n  }\n];"
+        "jsCode": "// Reddit response parse karo\nconst redditData = $input.first().json;\nconst posts = redditData?.data?.children || [];\n\n// Previous node ka data lo\nconst prevData = $('Build Search Data').first().json;\n\n// Strictly 24 hours (86400 seconds) timestamp filter\nconst nowInSeconds = Math.floor(Date.now() / 1000);\nconst twentyFourHoursAgo = nowInSeconds - 86400;\n\n// Filter posts posted within the last 24 hours\nconst recentPosts = posts.filter(post => {\n  const createdUtc = post.data?.created_utc || 0;\n  return createdUtc >= twentyFourHoursAgo;\n});\n\n// Fallback: If exact 24h filter returns 0 (e.g. slow subreddit), take top retrieved by t=day API\nconst finalPosts = recentPosts.length > 0 ? recentPosts : posts.slice(0, 10);\n\n// Reddit posts format karo\nconst formattedPosts = finalPosts.map((post, index) => {\n  const p = post.data;\n  const postDate = new Date(p.created_utc * 1000);\n  const hoursAgo = Math.max(0, Math.round((Date.now() - postDate.getTime()) / (1000 * 60 * 60)));\n  \n  return {\n    index: index + 1,\n    title: p.title || '',\n    subreddit: p.subreddit_name_prefixed || '',\n    url: p.permalink ? `https://reddit.com${p.permalink}` : '',\n    score: p.score || 0,\n    numComments: p.num_comments || 0,\n    author: p.author || '',\n    postedTime: `${hoursAgo} hours ago`\n  };\n});\n\n// Summary for sheets\nconst topPostsSummary = formattedPosts.length > 0\n  ? formattedPosts.slice(0, 10)\n      .map(p => `${p.index}. [${p.postedTime}] ${p.title} (${p.subreddit})\n   URL: ${p.url}`)\n      .join('\\n\\n')\n  : 'No posts/queries found in the last 24 hours for this location & niche.';\n\n// Custom questions as string\nconst questionsStr = prevData.customQuestions.length > 0\n  ? prevData.customQuestions.map((q, i) => `Q${i+1}: ${q}`).join('\\n')\n  : 'No custom questions provided';\n\nreturn [\n  {\n    json: {\n      Timestamp: prevData.timestamp,\n      City: prevData.city,\n      Country: prevData.country,\n      Niche: prevData.niche,\n      'Sources Selected': prevData.sourcesChoice,\n      'Custom Questions': questionsStr,\n      '24h Queries Found': formattedPosts.length,\n      'Top Reddit Queries (Last 24h)': topPostsSummary,\n      'Reddit (24h Search)': prevData.reddit24hWebUrl,\n      'LinkedIn (24h Search)': prevData.linkedin24hUrl,\n      'Facebook (24h Search)': prevData.facebook24hUrl,\n      'General Forums (24h Search)': prevData.generalForums24hUrl,\n      'Google Maps URL': prevData.googleMapsUrl,\n      _allPosts: JSON.stringify(formattedPosts)\n    }\n  }\n];"
       },
       "id": "a1b2c3d4-0004-0004-0004-000000000004",
-      "name": "Parse Reddit + Merge Data",
+      "name": "Parse & Filter 24h Queries",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ]
     },
     {
       "parameters": {
         "authentication": "serviceAccount",
         "resource": "spreadsheet",
         "operation": "create",
-        "title": "=Lead Research — {{ $json.Niche }} — {{ $json.City }} — {{ $json.Timestamp.slice(0,10) }}",
+        "title": "=24h Radar \u2014 {{ $json.Niche }} \u2014 {{ $json.City }} \u2014 {{ $json.Timestamp.slice(0,10) }}",
         "options": {}
       },
       "id": "a1b2c3d4-0005-0005-0005-000000000005",
       "name": "Create Google Sheet",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [1120, 300],
+      "position": [
+        1120,
+        300
+      ],
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
@@ -136,28 +159,132 @@
             "Niche": "={{ $json.Niche }}",
             "Sources Selected": "={{ $json['Sources Selected'] }}",
             "Custom Questions": "={{ $json['Custom Questions'] }}",
-            "Reddit Posts Found": "={{ $json['Reddit Posts Found'] }}",
-            "Top Reddit Results": "={{ $json['Top Reddit Results'] }}",
-            "Reddit Search URL": "={{ $json['Reddit Search URL'] }}",
-            "LinkedIn URL": "={{ $json['LinkedIn URL'] }}",
-            "Google Maps URL": "={{ $json['Google Maps URL'] }}",
-            "Facebook URL": "={{ $json['Facebook URL'] }}",
-            "Yelp URL": "={{ $json['Yelp URL'] }}"
+            "24h Queries Found": "={{ $json['24h Queries Found'] }}",
+            "Top Reddit Queries (Last 24h)": "={{ $json['Top Reddit Queries (Last 24h)'] }}",
+            "Reddit (24h Search)": "={{ $json['Reddit (24h Search)'] }}",
+            "LinkedIn (24h Search)": "={{ $json['LinkedIn (24h Search)'] }}",
+            "Facebook (24h Search)": "={{ $json['Facebook (24h Search)'] }}",
+            "General Forums (24h Search)": "={{ $json['General Forums (24h Search)'] }}",
+            "Google Maps URL": "={{ $json['Google Maps URL'] }}"
           },
           "schema": [
-            { "id": "Timestamp", "displayName": "Timestamp", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "City", "displayName": "City", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Country", "displayName": "Country", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Niche", "displayName": "Niche", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Sources Selected", "displayName": "Sources Selected", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
-            { "id": "Custom Questions", "displayName": "Custom Questions", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
-            { "id": "Reddit Posts Found", "displayName": "Reddit Posts Found", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": false },
-            { "id": "Top Reddit Results", "displayName": "Top Reddit Results", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
-            { "id": "Reddit Search URL", "displayName": "Reddit Search URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
-            { "id": "LinkedIn URL", "displayName": "LinkedIn URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
-            { "id": "Google Maps URL", "displayName": "Google Maps URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
-            { "id": "Facebook URL", "displayName": "Facebook URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false },
-            { "id": "Yelp URL", "displayName": "Yelp URL", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false }
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Country",
+              "displayName": "Country",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Niche",
+              "displayName": "Niche",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sources Selected",
+              "displayName": "Sources Selected",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Custom Questions",
+              "displayName": "Custom Questions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "24h Queries Found",
+              "displayName": "24h Queries Found",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Top Reddit Queries (Last 24h)",
+              "displayName": "Top Reddit Queries (Last 24h)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Reddit (24h Search)",
+              "displayName": "Reddit (24h Search)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "LinkedIn (24h Search)",
+              "displayName": "LinkedIn (24h Search)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Facebook (24h Search)",
+              "displayName": "Facebook (24h Search)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "General Forums (24h Search)",
+              "displayName": "General Forums (24h Search)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Google Maps URL",
+              "displayName": "Google Maps URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
           ]
         },
         "options": {}
@@ -166,7 +293,10 @@
       "name": "Save to Google Sheet",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [1340, 300],
+      "position": [
+        1340,
+        300
+      ],
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
@@ -177,14 +307,17 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Data saved successfully!\",\n  \"spreadsheetId\": \"{{ $('Create Google Sheet').first().json.spreadsheetId }}\",\n  \"spreadsheetUrl\": \"https://docs.google.com/spreadsheets/d/{{ $('Create Google Sheet').first().json.spreadsheetId }}\",\n  \"redditPostsFound\": {{ $('Parse Reddit + Merge Data').first().json['Reddit Posts Found'] }},\n  \"niche\": \"{{ $('Parse Reddit + Merge Data').first().json.Niche }}\",\n  \"city\": \"{{ $('Parse Reddit + Merge Data').first().json.City }}\"\n}",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"24-Hour Lead Queries saved successfully!\",\n  \"spreadsheetId\": \"{{ $('Create Google Sheet').first().json.spreadsheetId }}\",\n  \"spreadsheetUrl\": \"https://docs.google.com/spreadsheets/d/{{ $('Create Google Sheet').first().json.spreadsheetId }}\",\n  \"queriesFoundInLast24h\": {{ $('Parse & Filter 24h Queries').first().json['24h Queries Found'] }},\n  \"niche\": \"{{ $('Parse & Filter 24h Queries').first().json.Niche }}\",\n  \"city\": \"{{ $('Parse & Filter 24h Queries').first().json.City }}\"\n}",
         "options": {}
       },
       "id": "a1b2c3d4-0007-0007-0007-000000000007",
       "name": "Form Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1560, 300]
+      "position": [
+        1560,
+        300
+      ]
     }
   ],
   "connections": {
@@ -203,25 +336,25 @@
       "main": [
         [
           {
-            "node": "Fetch Reddit Posts",
+            "node": "Fetch Reddit Posts (24h)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch Reddit Posts": {
+    "Fetch Reddit Posts (24h)": {
       "main": [
         [
           {
-            "node": "Parse Reddit + Merge Data",
+            "node": "Parse & Filter 24h Queries",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Parse Reddit + Merge Data": {
+    "Parse & Filter 24h Queries": {
       "main": [
         [
           {
@@ -262,7 +395,13 @@
     "errorWorkflow": ""
   },
   "staticData": null,
-  "tags": ["lead-research", "reddit", "google-sheets", "automation"],
+  "tags": [
+    "lead-research",
+    "24h-filter",
+    "reddit",
+    "google-sheets",
+    "automation"
+  ],
   "meta": {
     "templateCredsSetupCompleted": false,
     "n8nVersion": "1.0.0"
