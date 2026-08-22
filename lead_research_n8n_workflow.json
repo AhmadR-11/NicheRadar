@@ -56,7 +56,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "completionText": "Thank you! Your 24-Hour Lead Queries have been researched and saved as a new tab in your Master Google Sheet."
+        }
       },
       "id": "a1b2c3d4-0001-0001-0001-000000000001",
       "name": "Form Trigger",
@@ -284,21 +286,6 @@
           "name": "Google Sheets OAuth2"
         }
       }
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={\n  \"success\": true,\n  \"message\": \"24-Hour Lead Queries appended to Master Sheet successfully!\",\n  \"tabName\": \"{{ $('Parse & Filter 24h Queries').first().json.TabName }}\",\n  \"queriesFoundInLast24h\": {{ $('Parse & Filter 24h Queries').first().json['24h Queries Found'] }},\n  \"niche\": \"{{ $('Parse & Filter 24h Queries').first().json.Niche }}\",\n  \"city\": \"{{ $('Parse & Filter 24h Queries').first().json.City }}\"\n}",
-        "options": {}
-      },
-      "id": "a1b2c3d4-0007-0007-0007-000000000007",
-      "name": "Form Response",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        1340,
-        300
-      ]
     }
   ],
   "connections": {
@@ -340,17 +327,6 @@
         [
           {
             "node": "Append to Master Google Sheet Tab",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Append to Master Google Sheet Tab": {
-      "main": [
-        [
-          {
-            "node": "Form Response",
             "type": "main",
             "index": 0
           }
