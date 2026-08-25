@@ -76,7 +76,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Form data extract karo\nlet masterSheetIdRaw = $input.first().json['Master Google Sheet ID or Full URL'] || '';\nlet masterSheetId = masterSheetIdRaw.trim();\n\n// Auto-extract ID if full URL is pasted\nif (masterSheetId.includes('/d/')) {\n  masterSheetId = masterSheetId.split('/d/')[1].split('/')[0];\n}\n\nconst city = $input.first().json['City / State'] || '';\nconst country = $input.first().json['Country'] || '';\nconst niche = $input.first().json['Niche / Industry'] || '';\nconst customQuestions = $input.first().json['Custom Questions / Query Guidelines'] || '';\nconst sourcesChoice = $input.first().json['Sources to Search'] || 'All Platforms (24h Filter)';\n\n// Tab Name build karo (e.g., Real Estate - Houston)\nconst tabName = `${niche} - ${city}`.slice(0, 30); // Max 30 chars for tab safety\n\n// Reddit search query build karo\nconst searchQuery = `${niche} ${city} ${country}`;\nconst redditQuery = encodeURIComponent(searchQuery);\nconst redditUrl = `https://www.reddit.com/search.rss?q=${redditQuery}&sort=new&t=day`;\n\n// 24h Filtered Search URLs for platforms\nconst linkedin24hUrl = `https://www.google.com/search?q=site:linkedin.com/posts+${encodeURIComponent(`${niche} ${city} ${country}`)}&tbs=qdr:d`;\nconst reddit24hWebUrl = `https://www.reddit.com/search/?q=${encodeURIComponent(`${niche} ${city} ${country}`)}&t=day&sort=new`;\nconst googleMapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(`${niche} ${city} ${country}`)}`;\nconst facebook24hUrl = `https://www.google.com/search?q=site:facebook.com+${encodeURIComponent(`${niche} ${city}`)}&tbs=qdr:d`;\nconst generalForums24hUrl = `https://www.google.com/search?q=${encodeURIComponent(`\"${niche}\" \"${city}\" (\"help\" OR \"question\" OR \"looking for\" OR \"recommendation\")`)}&tbs=qdr:d`;\n\n// Custom questions parse karo\nconst questionsList = customQuestions\n  .split('\\n')\n  .map(q => q.trim())\n  .filter(q => q.length > 0);\n\nconst timestamp = new Date().toISOString();\n\nreturn [\n  {\n    json: {\n      masterSheetId,\n      tabName,\n      city,\n      country,\n      niche,\n      customQuestions: questionsList,\n      customQuestionsRaw: customQuestions,\n      sourcesChoice,\n      redditUrl,\n      redditQuery: searchQuery,\n      linkedin24hUrl,\n      reddit24hWebUrl,\n      googleMapsUrl,\n      facebook24hUrl,\n      generalForums24hUrl,\n      timestamp\n    }\n  }\n];"
+        "jsCode": "// Form data extract karo\nlet masterSheetIdRaw = $input.first().json['Master Google Sheet ID or Full URL'] || '';\nlet masterSheetId = masterSheetIdRaw.trim();\n\n// Auto-extract ID if full URL is pasted\nif (masterSheetId.includes('/d/')) {\n  masterSheetId = masterSheetId.split('/d/')[1].split('/')[0];\n}\n\nconst city = $input.first().json['City / State'] || '';\nconst country = $input.first().json['Country'] || '';\nconst niche = $input.first().json['Niche / Industry'] || '';\nconst customQuestions = $input.first().json['Custom Questions / Query Guidelines'] || '';\nconst sourcesChoice = $input.first().json['Sources to Search'] || 'All Platforms (24h Filter)';\n\n// Tab Name build karo (e.g., Real Estate - Houston)\nconst tabName = `${niche} - ${city}`.slice(0, 30); // Max 30 chars for tab safety\n\n// Reddit search query build karo\nconst searchQuery = `${niche} ${city} ${country}`;\nconst redditQuery = encodeURIComponent(searchQuery);\nconst redditUrl = `https://www.reddit.com/search.rss?q=${redditQuery}&sort=new&t=day`;\n\n// 24h Filtered Search URLs for platforms\nconst linkedin24hUrl = `https://www.google.com/search?q=site:linkedin.com/posts+${encodeURIComponent(`${niche} ${city} ${country}`)}&tbs=qdr:d`;\nconst reddit24hWebUrl = `https://www.reddit.com/search/?q=${encodeURIComponent(`${niche} ${city} ${country}`)}&t=day&sort=new`;\nconst googleMapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(`${niche} ${city} ${country}`)}`;\nconst facebook24hUrl = `https://www.google.com/search?q=site:facebook.com+${encodeURIComponent(`${niche} ${city}`)}&tbs=qdr:d`;\nconst generalForums24hUrl = `https://www.google.com/search?q=${encodeURIComponent(`\"${niche}\" \"${city}\" (\"help\" OR \"question\" OR \"looking for\" OR \"recommendation\")`)}&tbs=qdr:d`;\n\n// Custom questions parse karo\nconst questionsList = customQuestions\n  .split('\\n')\n  .map(q => q.trim())\n  .filter(q => q.length > 0);\n\nconst questionsStr = questionsList.length > 0\n  ? questionsList.map((q, i) => `Q${i+1}: ${q}`).join(' | ')\n  : 'None';\n\nconst timestamp = new Date().toISOString();\n\nreturn [\n  {\n    json: {\n      masterSheetId,\n      tabName,\n      city,\n      country,\n      niche,\n      questionsStr,\n      sourcesChoice,\n      redditUrl,\n      searchQuery,\n      linkedin24hUrl,\n      reddit24hWebUrl,\n      googleMapsUrl,\n      facebook24hUrl,\n      generalForums24hUrl,\n      timestamp\n    }\n  }\n];"
       },
       "id": "a1b2c3d4-0002-0002-0002-000000000002",
       "name": "Build Search Data",
@@ -125,10 +125,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Response parse karo\nconst inputData = $input.first().json || {};\nconst prevData = $('Build Search Data').first().json;\nconst sourceChoice = prevData.sourcesChoice || '';\n\nlet formattedPosts = [];\n\n// Parse XML if Reddit was queried and returned content\nif (sourceChoice.includes('Reddit') || sourceChoice.includes('All')) {\n  let rawXml = '';\n  if (typeof inputData === 'string') {\n    rawXml = inputData;\n  } else if (inputData.data) {\n    rawXml = typeof inputData.data === 'string' ? inputData.data : JSON.stringify(inputData.data);\n  } else {\n    rawXml = JSON.stringify(inputData);\n  }\n\n  // Regex to extract <entry> items from RSS Feed\n  const entryRegex = /<entry>[\\s\\S]*?<title>(.*?)<\\/title>[\\s\\S]*?<link [^>]*href=\"(.*?)\"[\\s\\S]*?<updated>(.*?)<\\/updated>[\\s\\S]*?<\\/entry>/gi;\n  let match;\n  let count = 0;\n\n  while ((match = entryRegex.exec(rawXml)) !== null && count < 10) {\n    count++;\n    let title = match[1]\n      .replace(/&amp;/g, '&')\n      .replace(/&lt;/g, '<')\n      .replace(/&gt;/g, '>')\n      .replace(/&#39;/g, \"'\")\n      .replace(/&quot;/g, '\"');\n    const url = match[2];\n    const updated = match[3];\n    const postDate = new Date(updated);\n    const hoursAgo = Math.max(0, Math.round((Date.now() - postDate.getTime()) / (1000 * 60 * 60)));\n\n    formattedPosts.push({\n      index: count,\n      title,\n      url,\n      postedTime: `${hoursAgo} hours ago`\n    });\n  }\n}\n\n// Summary for sheets\nconst topPostsSummary = formattedPosts.length > 0\n  ? formattedPosts\n      .map(p => `${p.index}. [${p.postedTime}] ${p.title}\n   URL: ${p.url}`)\n      .join('\\n\\n')\n  : (sourceChoice.includes('Reddit') || sourceChoice.includes('All'))\n      ? 'No direct Reddit posts found in last 24h. Use 24h Search Link below.'\n      : 'N/A (Reddit not selected)';\n\n// Custom questions as string\nconst questionsStr = prevData.customQuestions.length > 0\n  ? prevData.customQuestions.map((q, i) => `Q${i+1}: ${q}`).join('\\n')\n  : 'No custom questions provided';\n\nreturn [\n  {\n    json: {\n      MasterSheetId: prevData.masterSheetId,\n      TabName: prevData.tabName,\n      Timestamp: prevData.timestamp,\n      City: prevData.city,\n      Country: prevData.country,\n      Niche: prevData.niche,\n      'Source Selected': sourceChoice,\n      'Custom Questions': questionsStr,\n      '24h Queries Found': formattedPosts.length,\n      'Top Reddit Queries (Last 24h)': topPostsSummary,\n      'Reddit (24h Search)': (sourceChoice.includes('Reddit') || sourceChoice.includes('All')) ? prevData.reddit24hWebUrl : 'N/A',\n      'LinkedIn (24h Search)': (sourceChoice.includes('LinkedIn') || sourceChoice.includes('All')) ? prevData.linkedin24hUrl : 'N/A',\n      'Facebook (24h Search)': (sourceChoice.includes('Facebook') || sourceChoice.includes('All')) ? prevData.facebook24hUrl : 'N/A',\n      'General Forums (24h Search)': (sourceChoice.includes('Forums') || sourceChoice.includes('All')) ? prevData.generalForums24hUrl : 'N/A',\n      'Google Maps URL': (sourceChoice.includes('Maps') || sourceChoice.includes('All')) ? prevData.googleMapsUrl : 'N/A'\n    }\n  }\n];"
+        "jsCode": "// Response parse karo aur har post / link ke liye ALAG ROW ITEM create karo\nconst inputData = $input.first().json || {};\nconst prevData = $('Build Search Data').first().json;\nconst sourceChoice = prevData.sourcesChoice || 'All Platforms (24h Filter)';\n\nconst rowItems = [];\n\n// 1. Reddit Posts Parse (If selected)\nif (sourceChoice.includes('Reddit') || sourceChoice.includes('All')) {\n  let rawXml = '';\n  if (typeof inputData === 'string') {\n    rawXml = inputData;\n  } else if (inputData.data) {\n    rawXml = typeof inputData.data === 'string' ? inputData.data : JSON.stringify(inputData.data);\n  } else {\n    rawXml = JSON.stringify(inputData);\n  }\n\n  const entryRegex = /<entry>[\\s\\S]*?<title>(.*?)<\\/title>[\\s\\S]*?<link [^>]*href=\"(.*?)\"[\\s\\S]*?<updated>(.*?)<\\/updated>[\\s\\S]*?<\\/entry>/gi;\n  let match;\n  let count = 0;\n\n  while ((match = entryRegex.exec(rawXml)) !== null && count < 10) {\n    count++;\n    let title = match[1]\n      .replace(/&amp;/g, '&')\n      .replace(/&lt;/g, '<')\n      .replace(/&gt;/g, '>')\n      .replace(/&#39;/g, \"'\")\n      .replace(/&quot;/g, '\"');\n    const url = match[2];\n    const updated = match[3];\n    const postDate = new Date(updated);\n    const hoursAgo = Math.max(0, Math.round((Date.now() - postDate.getTime()) / (1000 * 60 * 60)));\n\n    rowItems.push({\n      json: {\n        MasterSheetId: prevData.masterSheetId,\n        TabName: prevData.tabName,\n        Title: title,\n        'Post / Link': url,\n        Platform: 'Reddit',\n        'Posted Time': `${hoursAgo} hours ago`,\n        City: prevData.city,\n        Country: prevData.country,\n        Niche: prevData.niche,\n        'Custom Questions': prevData.questionsStr\n      }\n    });\n  }\n\n  // Backup link row for Reddit search if no direct RSS entries matched\n  if (count === 0) {\n    rowItems.push({\n      json: {\n        MasterSheetId: prevData.masterSheetId,\n        TabName: prevData.tabName,\n        Title: `Reddit 24h Search Feed (${prevData.niche} - ${prevData.city})`,\n        'Post / Link': prevData.reddit24hWebUrl,\n        Platform: 'Reddit',\n        'Posted Time': 'Past 24 Hours Search',\n        City: prevData.city,\n        Country: prevData.country,\n        Niche: prevData.niche,\n        'Custom Questions': prevData.questionsStr\n      }\n    });\n  }\n}\n\n// 2. LinkedIn Search Link Row (If selected)\nif (sourceChoice.includes('LinkedIn') || sourceChoice.includes('All')) {\n  rowItems.push({\n    json: {\n      MasterSheetId: prevData.masterSheetId,\n      TabName: prevData.tabName,\n      Title: `LinkedIn 24h Posts Search (${prevData.niche} - ${prevData.city})`,\n      'Post / Link': prevData.linkedin24hUrl,\n      Platform: 'LinkedIn',\n      'Posted Time': 'Past 24 Hours Search',\n      City: prevData.city,\n      Country: prevData.country,\n      Niche: prevData.niche,\n      'Custom Questions': prevData.questionsStr\n    }\n  });\n}\n\n// 3. Facebook Search Link Row (If selected)\nif (sourceChoice.includes('Facebook') || sourceChoice.includes('All')) {\n  rowItems.push({\n    json: {\n      MasterSheetId: prevData.masterSheetId,\n      TabName: prevData.tabName,\n      Title: `Facebook 24h Posts Search (${prevData.niche} - ${prevData.city})`,\n      'Post / Link': prevData.facebook24hUrl,\n      Platform: 'Facebook',\n      'Posted Time': 'Past 24 Hours Search',\n      City: prevData.city,\n      Country: prevData.country,\n      Niche: prevData.niche,\n      'Custom Questions': prevData.questionsStr\n    }\n  });\n}\n\n// 4. General Forums Search Link Row (If selected)\nif (sourceChoice.includes('Forums') || sourceChoice.includes('All')) {\n  rowItems.push({\n    json: {\n      MasterSheetId: prevData.masterSheetId,\n      TabName: prevData.tabName,\n      Title: `General Forums 24h Queries Search (${prevData.niche} - ${prevData.city})`,\n      'Post / Link': prevData.generalForums24hUrl,\n      Platform: 'General Forums',\n      'Posted Time': 'Past 24 Hours Search',\n      City: prevData.city,\n      Country: prevData.country,\n      Niche: prevData.niche,\n      'Custom Questions': prevData.questionsStr\n    }\n  });\n}\n\n// 5. Google Maps Search Link Row (If selected)\nif (sourceChoice.includes('Maps') || sourceChoice.includes('All')) {\n  rowItems.push({\n    json: {\n      MasterSheetId: prevData.masterSheetId,\n      TabName: prevData.tabName,\n      Title: `Google Maps Businesses Search (${prevData.niche} - ${prevData.city})`,\n      'Post / Link': prevData.googleMapsUrl,\n      Platform: 'Google Maps',\n      'Posted Time': 'Direct Business Search',\n      City: prevData.city,\n      Country: prevData.country,\n      Niche: prevData.niche,\n      'Custom Questions': prevData.questionsStr\n    }\n  });\n}\n\nreturn rowItems;"
       },
       "id": "a1b2c3d4-0004-0004-0004-000000000004",
-      "name": "Parse & Filter 24h Queries",
+      "name": "Parse & Build Individual Row Items",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -144,9 +144,9 @@
         "documentId": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $('Parse & Filter 24h Queries').first().json.MasterSheetId }}"
+          "value": "={{ $('Build Search Data').first().json.masterSheetId }}"
         },
-        "title": "={{ $('Parse & Filter 24h Queries').first().json.TabName }}",
+        "title": "={{ $('Build Search Data').first().json.tabName }}",
         "options": {}
       },
       "id": "a1b2c3d4-0005-0005-0005-000000000005",
@@ -172,39 +172,61 @@
         "documentId": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $('Parse & Filter 24h Queries').first().json.MasterSheetId }}"
+          "value": "={{ $('Build Search Data').first().json.masterSheetId }}"
         },
         "sheetName": {
           "__rl": true,
           "mode": "name",
-          "value": "={{ $('Parse & Filter 24h Queries').first().json.TabName }}"
+          "value": "={{ $('Build Search Data').first().json.tabName }}"
         },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "Timestamp": "={{ $('Parse & Filter 24h Queries').first().json.Timestamp }}",
-            "City": "={{ $('Parse & Filter 24h Queries').first().json.City }}",
-            "Country": "={{ $('Parse & Filter 24h Queries').first().json.Country }}",
-            "Niche": "={{ $('Parse & Filter 24h Queries').first().json.Niche }}",
-            "Source Selected": "={{ $('Parse & Filter 24h Queries').first().json['Source Selected'] }}",
-            "Custom Questions": "={{ $('Parse & Filter 24h Queries').first().json['Custom Questions'] }}",
-            "24h Queries Found": "={{ $('Parse & Filter 24h Queries').first().json['24h Queries Found'] }}",
-            "Top Reddit Queries (Last 24h)": "={{ $('Parse & Filter 24h Queries').first().json['Top Reddit Queries (Last 24h)'] }}",
-            "Reddit (24h Search)": "={{ $('Parse & Filter 24h Queries').first().json['Reddit (24h Search)'] }}",
-            "LinkedIn (24h Search)": "={{ $('Parse & Filter 24h Queries').first().json['LinkedIn (24h Search)'] }}",
-            "Facebook (24h Search)": "={{ $('Parse & Filter 24h Queries').first().json['Facebook (24h Search)'] }}",
-            "General Forums (24h Search)": "={{ $('Parse & Filter 24h Queries').first().json['General Forums (24h Search)'] }}",
-            "Google Maps URL": "={{ $('Parse & Filter 24h Queries').first().json['Google Maps URL'] }}"
+            "Title": "={{ $json.Title }}",
+            "Post / Link": "={{ $json['Post / Link'] }}",
+            "Platform": "={{ $json.Platform }}",
+            "Posted Time": "={{ $json['Posted Time'] }}",
+            "City": "={{ $json.City }}",
+            "Country": "={{ $json.Country }}",
+            "Niche": "={{ $json.Niche }}",
+            "Custom Questions": "={{ $json['Custom Questions'] }}"
           },
           "schema": [
             {
-              "id": "Timestamp",
-              "displayName": "Timestamp",
+              "id": "Title",
+              "displayName": "Title",
               "required": false,
               "defaultMatch": false,
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true
+            },
+            {
+              "id": "Post / Link",
+              "displayName": "Post / Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Posted Time",
+              "displayName": "Posted Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
             },
             {
               "id": "City",
@@ -213,7 +235,7 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": false
             },
             {
               "id": "Country",
@@ -222,20 +244,11 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": false
             },
             {
               "id": "Niche",
               "displayName": "Niche",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "Source Selected",
-              "displayName": "Source Selected",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -250,76 +263,13 @@
               "display": true,
               "type": "string",
               "canBeUsedToMatch": false
-            },
-            {
-              "id": "24h Queries Found",
-              "displayName": "24h Queries Found",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "Top Reddit Queries (Last 24h)",
-              "displayName": "Top Reddit Queries (Last 24h)",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "Reddit (24h Search)",
-              "displayName": "Reddit (24h Search)",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "LinkedIn (24h Search)",
-              "displayName": "LinkedIn (24h Search)",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "Facebook (24h Search)",
-              "displayName": "Facebook (24h Search)",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "General Forums (24h Search)",
-              "displayName": "General Forums (24h Search)",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "Google Maps URL",
-              "displayName": "Google Maps URL",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": false
             }
           ]
         },
         "options": {}
       },
       "id": "a1b2c3d4-0006-0006-0006-000000000006",
-      "name": "Append to Master Google Sheet Tab",
+      "name": "Append Rows to Master Google Sheet Tab",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
@@ -361,14 +311,14 @@
       "main": [
         [
           {
-            "node": "Parse & Filter 24h Queries",
+            "node": "Parse & Build Individual Row Items",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Parse & Filter 24h Queries": {
+    "Parse & Build Individual Row Items": {
       "main": [
         [
           {
@@ -383,7 +333,7 @@
       "main": [
         [
           {
-            "node": "Append to Master Google Sheet Tab",
+            "node": "Append Rows to Master Google Sheet Tab",
             "type": "main",
             "index": 0
           }
