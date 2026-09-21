@@ -7,7 +7,13 @@ import time
 from fetchers.base import PostItem
 from utils.intent_analyzer import analyze_intent
 from config import SERPER_API_KEY
-from ddgs import DDGS
+try:
+    from ddgs import DDGS
+except ImportError:
+    try:
+        from duckduckgo_search import DDGS
+    except ImportError:
+        DDGS = None
 
 def is_valid_post_link(url: str, platform: str) -> bool:
     """Strictly validates that the extracted URL is a direct post/thread link."""
